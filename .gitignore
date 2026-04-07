@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# Runtime outputs
+api/runtime/
+ml/runs/
+ml/outputs/
+web/.env.local
+
+# Data and model artifacts
+data/
+datasets/
+checkpoints/
+models/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.tif
+*.tiff
+*.zarr
+*.zip
+*.tar
+*.tar.gz
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Keep tiny documented sample assets only
+!sample_data/
+!sample_data/README.md
+
+# Allow demo assets
+!demo_static/examples/*.tif
+!demo_static/model/*.onnx
+
+# Extra ignores
+.claude/
+sample_data/
