@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "space-disaster-mapper-ml"
+version = "0.1.0"
+description = "CPU-friendly ML utilities for satellite flood and wildfire segmentation demos."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "Pillow>=10.0",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.2"]
+geotiff = ["rasterio>=1.3"]
+test = ["pytest>=8.0"]
+
+[project.scripts]
+prepare_sample_manifest = "space_mapper.cli.prepare_sample_manifest:main"
+train_baseline = "space_mapper.cli.train_baseline:main"
+evaluate_predictions = "space_mapper.cli.evaluate_predictions:main"
+predict_sample = "space_mapper.cli.predict_sample:main"
+
+[tool.setuptools]
+packages = ["space_mapper", "space_mapper.cli", "space_mapper.models"]

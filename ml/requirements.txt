@@ -1,0 +1,7 @@
+numpy>=1.24
+Pillow>=10.0
+tqdm>=4.66
+
+# Optional, install when you need model training/inference or GeoTIFF support:
+# torch>=2.2
+# rasterio>=1.3
