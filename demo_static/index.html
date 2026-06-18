@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FloodLens — AI Flood Area Detection</title>
+<meta name="description" content="FloodLens: AI flood area detection from Sentinel-2. Pixel-level flood mapping for disaster response — validated across 10 countries, edge-deployed in your browser.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<style>
+:root {
+  --bg: #f4f5f6; --card: #ffffff; --fg: #111827; --body: #374151;
+  --muted: #6b7280; --border: #e5e7eb;
+  --green: #15803d; --green-dark: #166534; --green-soft: #f0fdf4;
+  --radius: 16px;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: 'Space Grotesk', ui-sans-serif, system-ui; line-height: 1.5; padding: 16px; }
+.wrap { max-width: 1180px; margin: 0 auto; }
+a { color: var(--green); }
+.mono { font-family: 'Geist Mono', monospace; }
+
+/* ---------- hero ---------- */
+.hero {
+  border-radius: 28px; padding: 56px 48px 52px; color: #fff; margin-bottom: 18px;
+  background:
+    radial-gradient(1100px 480px at 85% -10%, rgba(56,189,248,0.30), transparent 60%),
+    radial-gradient(900px 420px at 8% 112%, rgba(34,197,94,0.22), transparent 55%),
+    linear-gradient(160deg, #0b2530 0%, #0e3542 48%, #114237 100%);
+}
+.pill-logo {
+  display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #111827;
+  border-radius: 999px; padding: 8px 18px; font-weight: 600; font-size: 14px;
+}
+.pill-logo .g { color: var(--green); }
+.hero h1 { font-size: clamp(34px, 5vw, 56px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; margin: 26px 0 14px; }
+.hero p.tag { color: rgba(255,255,255,0.85); font-size: 17px; max-width: 640px; margin-bottom: 26px; }
+.metric-pills { display: flex; gap: 10px; flex-wrap: wrap; }
+.metric-pills span {
+  border: 1px solid rgba(255,255,255,0.30); border-radius: 999px; padding: 7px 16px;
+  font-size: 13px; color: rgba(255,255,255,0.95); font-family: 'Geist Mono', monospace;
+  background: rgba(255,255,255,0.08);
+}
+.badge-wasm {
+  display: inline-block; margin-top: 18px; font-family: 'Geist Mono', monospace;
+  font-size: 12px; color: #86efac; letter-spacing: 0.06em;
+}
+
+/* ---------- demo ---------- */
+.demo { display: grid; grid-template-columns: 340px 1fr; gap: 16px; margin-bottom: 8px; }
+@media (max-width: 900px) { .demo { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.label { font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+.dropzone {
+  display: block; border: 1.5px dashed var(--border); border-radius: 12px; padding: 26px 14px;
+  text-align: center; color: var(--muted); cursor: pointer; transition: border-color .15s;
+  font-size: 14px; line-height: 1.7;
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--green); color: var(--green); }
+.dropzone input { display: none; }
+.seg { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+.seg button {
+  font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 9px 16px; border-radius: 999px;
+  border: 1px solid var(--border); background: #fff; color: var(--muted); cursor: pointer;
+}
+.seg button.on { background: var(--green); border-color: var(--green); color: #fff; }
+.btn {
+  width: 100%; padding: 13px 26px; border-radius: 999px; border: none; cursor: pointer;
+  background: var(--green); color: #fff; font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600; font-size: 15px;
+}
+.btn:hover { background: var(--green-dark); }
+.btn:disabled { opacity: 0.55; cursor: wait; }
+.examples { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.examples .ex-intro { font-size: 13.5px; color: var(--body); line-height: 1.55; margin: 0 0 12px; }
+.ex-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: stretch; }
+.examples .ex {
+  flex: 1; text-align: left; padding: 10px 12px;
+  border-radius: 10px; border: 1px solid var(--border); background: #fff; cursor: pointer;
+  font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--body);
+}
+.examples .ex:hover { border-color: var(--green); color: var(--green); }
+.examples .ex-dl {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff;
+  font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted);
+  text-decoration: none; white-space: nowrap;
+}
+.examples .ex-dl:hover { border-color: var(--green); color: var(--green); }
+.ex-hint { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 12px 0 0; }
+.ex-hint strong { color: var(--body); font-weight: 600; }
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .views { grid-template-columns: 1fr; } }
+.views canvas { width: 100%; border-radius: 10px; background: #f3f4f6; display: block; aspect-ratio: 1; }
+.stats { display: flex; gap: 36px; flex-wrap: wrap; margin-top: 16px; }
+.stat { display: flex; flex-direction: column; gap: 3px; }
+.stat-label { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--muted); }
+.stat-value { font-size: 16px; font-weight: 600; }
+.stat-value.g { color: var(--green); font-family: 'Geist Mono', monospace; }
+
+/* ---------- sections ---------- */
+.section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 34px 30px; margin-top: 16px; }
+.kicker { font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; color: var(--green); text-transform: uppercase; margin: 26px 0 6px; }
+.section h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+.section p, .section li { color: var(--body); font-size: 15.5px; line-height: 1.65; margin-bottom: 10px; }
+.section strong { color: var(--fg); }
+.section table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; }
+.section th, .section td { border-bottom: 1px solid var(--border); padding: 9px 12px; text-align: left; font-size: 14.5px; color: var(--body); }
+.section th { font-family: 'Geist Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.eq { text-align: center; margin: 16px 0; overflow-x: auto; }
+.diagram { background: #fafafa; border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin: 14px 0; overflow-x: auto; overflow-y: visible; }
+.diagram .mermaid { display: block; overflow: visible; }
+.diagram .mermaid svg { max-width: 100%; height: auto !important; overflow: visible; }
+/* Mermaid foreignObject inherits body line-height and clips mid-glyph — force room to breathe */
+.diagram .mermaid foreignObject { overflow: visible !important; }
+.diagram .mermaid foreignObject div,
+.diagram .mermaid .nodeLabel,
+.diagram .mermaid .edgeLabel {
+  line-height: 1.35 !important;
+  font-size: 13px !important;
+  overflow: visible !important;
+}
+.diagram-caption { font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 10px; text-align: center; }
+.footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 14px; padding: 26px 10px 12px; }
+.footer a { text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <span class="pill-logo">🛰️ <span><span class="g">Flood</span>Lens</span></span>
+    <h1>AI flood area detection from space.</h1>
+    <p class="tag">FloodLens detects flood extent on Sentinel-2 satellite imagery at pixel level —
+    mapping inundated areas for disaster response. Trained across 10 countries on the
+    Sen1Floods11 benchmark, beating classical indices ~6×, and running edge inference
+    in your browser in under 100&nbsp;ms.</p>
+    <div class="metric-pills">
+      <span>IoU 0.68</span><span>Dice 0.81</span><span>Recall 0.96</span>
+      <span>~6× vs baseline</span><span>10 countries</span>
+    </div>
+    <span class="badge-wasm">▲ FLOOD AREA DETECTION · EDGE AI · ONNX · WEBASSEMBLY</span>
+  </div>
+
+  <div class="demo">
+    <div class="card">
+      <div class="label">Live flood detection · samples</div>
+      <div class="examples" style="margin-top:0;padding-top:0;border-top:none">
+        <p class="ex-intro">Run flood area detection on real disaster chips, or
+        <strong>Download</strong> one and re-upload it through the full pipeline.</p>
+        <div class="ex-row">
+          <button class="ex" data-file="examples/Spain_5923267.tif" data-truth="76.9"
+            data-scene="Coastal lagoon · mostly water">Spain · coastal lagoon</button>
+          <a class="ex-dl" href="examples/Spain_5923267.tif" download="Spain_5923267.tif"
+            title="Download this Sentinel-2 chip">Download</a>
+        </div>
+        <div class="ex-row">
+          <button class="ex" data-file="examples/Mekong_52610.tif" data-truth="80.4"
+            data-scene="River delta · dense water">Mekong · river delta</button>
+          <a class="ex-dl" href="examples/Mekong_52610.tif" download="Mekong_52610.tif"
+            title="Download this Sentinel-2 chip">Download</a>
+        </div>
+        <div class="ex-row">
+          <button class="ex" data-file="examples/Ghana_887131.tif" data-truth="3.8"
+            data-scene="Narrow river · sparse water">Ghana · winding river</button>
+          <a class="ex-dl" href="examples/Ghana_887131.tif" download="Ghana_887131.tif"
+            title="Download this Sentinel-2 chip">Download</a>
+        </div>
+        <div class="ex-row">
+          <button class="ex" data-file="examples/Ghana_264787.tif" data-truth="0.0"
+            data-scene="Heavy cloud · no water (stress test)">Ghana · clouds, no water</button>
+          <a class="ex-dl" href="examples/Ghana_264787.tif" download="Ghana_264787.tif"
+            title="Download this Sentinel-2 chip">Download</a>
+        </div>
+        <p class="ex-hint">JPG/PNG vacation photos will not work — the model needs a
+        <strong>13-band Sentinel-2 GeoTIFF</strong> (visible + infrared). The samples above
+        are real chips from Sen1Floods11.</p>
+      </div>
+      <div class="label" style="margin-top:18px">Or upload your own GeoTIFF</div>
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".tif,.tiff">
+        <span id="dropzone-text">Drop a 13-band .tif here<br>— or click to browse —</span>
+      </label>
+      <div class="label" style="margin-top:18px">Model</div>
+      <div class="seg" id="model-seg">
+        <button class="on" data-model="unet">Flood U-Net</button>
+        <button data-model="ndwi">NDWI baseline</button>
+      </div>
+      <button class="btn" id="predict-btn">Detect flood area ↗</button>
+    </div>
+    <div>
+      <div class="views">
+        <div class="card">
+          <div class="label">Satellite · true color</div>
+          <canvas id="canvas-rgb" width="512" height="512"></canvas>
+        </div>
+        <div class="card">
+          <div class="label">Detected flood area · blue</div>
+          <canvas id="canvas-overlay" width="512" height="512"></canvas>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="stats" id="stats">
+          <div class="stat"><span class="stat-label">STATUS</span>
+          <span class="stat-value" id="status-value">Loading model…</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="kicker">01 · Mission</div>
+    <h2>Flood area detection at planetary scale</h2>
+    <p>Floods are the world's most frequent natural disaster. When water rises, agencies need
+    one product above all: a <strong>flood extent map</strong> — which ground is inundated,
+    right now. FloodLens is an AI flood-area detection system that turns multi-spectral
+    Sentinel-2 scenes into pixel-level inundation maps. A 512×512 chip is
+    <strong>262,144 flood / not-flood decisions</strong>. Classical water indices fail across
+    continents and cloud regimes. FloodLens learns flood signatures from labeled disaster
+    imagery — the same problem class targeted by NASA/IBM geospatial foundation models like
+    <strong>Prithvi</strong>.</p>
+
+    <div class="kicker">02 · Training data</div>
+    <h2>Sen1Floods11 — industry flood-mapping benchmark</h2>
+    <p>FloodLens is trained and evaluated on
+    <a href="https://github.com/cloudtostreet/Sen1Floods11">Sen1Floods11</a>
+    (Bonafilia et al., CVPR 2020 Workshops): hand-labeled chips from <strong>11 major flood
+    events</strong>, every pixel marked inundated / dry by analysts. Operating set:
+    <strong>102 chips across 10 countries</strong> (Ghana, India, Mekong, Nigeria, Pakistan,
+    Paraguay, Somalia, Spain, Sri Lanka, USA). Inputs are 13-band Sentinel-2 cubes —
+    visible plus infrared channels that expose water even when RGB looks ambiguous.</p>
+
+    <div class="kicker">03 · Baseline</div>
+    <h2>Classical flood index — NDWI</h2>
+    <p>Legacy flood screening uses the Normalized Difference Water Index:</p>
+    <div class="eq">$$\text{NDWI} = \frac{G - \text{NIR}}{G + \text{NIR}}$$</div>
+    <p>Threshold NDWI → call it flood water. No learning. On our test set it collapses to
+    IoU 0.11 — clouds and bright soil trigger massive false flood alarms. That is the
+    bar FloodLens clears.</p>
+
+    <div class="kicker">04 · Detection model</div>
+    <h2>Deep flood segmentation — U-Net</h2>
+    <p>FloodLens uses a <strong>U-Net</strong> encoder–decoder built for dense prediction:
+    the encoder extracts flood-relevant features; the decoder reconstructs a full-resolution
+    inundation map; <strong>skip connections</strong> preserve shoreline geometry.
+    The production checkpoint is a compact <strong>~0.5&nbsp;MB</strong> network optimized for
+    edge deployment — one logit $z$ per pixel, converted to flood probability:</p>
+    <div class="eq">$$p = \sigma(z) = \frac{1}{1 + e^{-z}} \qquad \text{flood if } p \ge 0.5$$</div>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+    IN["Sentinel-2 input"] --> E1["Feature extract"]
+    E1 --> E2["Flood patterns"]
+    E2 --> BN["Scene encoding"]
+    BN --> D2["Localize inundation"]
+    D2 --> D1["Refine boundaries"]
+    D1 --> OUT["Flood area map"]
+    E2 -. skip .-> D2
+    E1 -. skip .-> D1
+      </pre>
+      <div class="diagram-caption">Flood U-Net — encode · bottleneck · decode · flood area output</div>
+    </div>
+
+    <div class="kicker">05 · The key equation</div>
+    <h2>The loss function — and the trap hiding in it</h2>
+    <p>Training minimizes <strong>binary cross-entropy</strong> between prediction $p$ and
+    truth $y \in \{0,1\}$:</p>
+    <div class="eq">$$\mathcal{L}_{\text{BCE}} = -\big[\,y \log p + (1-y)\log(1-p)\,\big]$$</div>
+    <p>Its gradient w.r.t. the logit is simply $\partial\mathcal{L}/\partial z = p - y$.
+    Averaged over an image that is ~98% "not water," that gradient is dominated by the majority
+    class — so plain BCE is minimized by predicting <strong>no water anywhere</strong>. Our
+    first model did exactly that: <strong>IoU 0.000.</strong> The fix is to make rare water
+    pixels count. We weight the positive class by
+    $w_+ \approx N_{\text{neg}}/N_{\text{pos}} \approx 91$ and add a <strong>soft Dice
+    loss</strong> that optimizes overlap directly and ignores true negatives:</p>
+    <div class="eq">$$\mathcal{L} = \underbrace{-\big[\,w_+\, y \log p + (1-y)\log(1-p)\,\big]}_{\text{weighted BCE}}
+    \;+\; \underbrace{1 - \frac{2\sum_i p_i y_i + \epsilon}{\sum_i p_i + \sum_i y_i + \epsilon}}_{\text{soft Dice}}$$</div>
+    <p>Optimized with <strong>AdamW</strong> (momentum + adaptive step size + weight decay),
+    30 epochs.</p>
+
+    <div class="kicker">06 · Evaluation</div>
+    <h2>Metrics built for flood detection</h2>
+    <p>Pixel accuracy is useless here — a model that never detects flood scores ~98% and
+    misses every disaster. FloodLens reports overlap metrics used in remote-sensing flood
+    mapping:</p>
+    <div class="eq">$$\text{IoU} = \frac{TP}{TP + FP + FN} \qquad
+    \text{Dice/F1} = \frac{2\,TP}{2\,TP + FP + FN}$$</div>
+    <div class="eq">$$\text{Precision} = \frac{TP}{TP + FP} \qquad
+    \text{Recall} = \frac{TP}{TP + FN}$$</div>
+
+    <div class="kicker">07 · Results</div>
+    <h2>Flood detection performance · held-out test</h2>
+    <table>
+      <tr><th>Method</th><th>IoU ↑</th><th>Dice/F1 ↑</th><th>Precision</th><th>Recall</th></tr>
+      <tr><td>Classical NDWI</td><td>0.108</td><td>0.195</td><td>0.110</td><td>0.858</td></tr>
+      <tr><td><strong>FloodLens U-Net</strong></td><td><strong>0.678</strong></td><td><strong>0.808</strong></td><td><strong>0.699</strong></td><td><strong>0.958</strong></td></tr>
+    </table>
+    <p><strong>~6× IoU lift</strong> over the classical flood index. Experiment trail:</p>
+    <table>
+      <tr><th>Version</th><th>Data</th><th>Loss</th><th>IoU</th><th>Outcome</th></tr>
+      <tr><td>v1</td><td>30 chips, one event</td><td>plain BCE</td><td>0.000</td><td>Collapsed — never detected flood</td></tr>
+      <tr><td>v2</td><td>30 chips, one event</td><td>weighted BCE + Dice</td><td>0.193</td><td>Detection unlocked</td></tr>
+      <tr><td>v3</td><td>102 chips, 10 countries</td><td>weighted BCE + Dice</td><td><strong>0.678</strong></td><td>Cross-continent flood mapping</td></tr>
+    </table>
+
+    <div class="kicker">08 · System architecture</div>
+    <h2>End-to-end flood detection pipeline</h2>
+    <p>Train on labeled flood events. Export an edge-ready ONNX detector. Deploy flood area
+    detection directly in the browser — zero server inference cost.</p>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+    A["Ingest flood dataset"] --> B["Train / val / test"]
+    B --> C["Train flood U-Net"]
+    C --> D["Evaluate IoU · Dice"]
+    C --> E[("Export ONNX detector")]
+      </pre>
+      <div class="diagram-caption">Offline · flood model training and export</div>
+    </div>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+    U["Satellite GeoTIFF"] --> R["Spectral ingest"]
+    R --> C{"Detector"}
+    C -->|Flood U-Net| M["Edge ONNX inference"]
+    C -->|Baseline| N["NDWI index"]
+    M --> T["Flood / dry mask"]
+    N --> T
+    T --> O["Flood area overlay"]
+      </pre>
+      <div class="diagram-caption">Online · real-time flood area detection in-browser</div>
+    </div>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+    actor Analyst
+    participant App as FloodLens
+    participant AI as Flood U-Net
+    Analyst->>App: Load Sentinel-2 scene
+    App->>App: Ingest 13 bands · resize
+    App->>AI: Run flood area detection
+    AI-->>App: Per-pixel flood probability
+    App->>App: Threshold · overlay inundation
+    App-->>Analyst: Flood extent map + coverage %
+      </pre>
+      <div class="diagram-caption">Flood area detection · end to end</div>
+    </div>
+
+    <div class="kicker">09 · Roadmap</div>
+    <h2>Scaling flood intelligence</h2>
+    <p>FloodLens is the core of a broader <strong>Space Disaster Mapper</strong> stack:
+    satellite flood + wildfire segmentation, Prithvi-class foundation-model comparisons, and
+    ImpactMesh multimodal fusion (optical · SAR · DEM). Next: <strong>Sentinel-1 SAR</strong>
+    for all-weather flood detection through cloud, GPU-scale training, probability calibration,
+    and a NASA/IBM <strong>Prithvi</strong> reference run.</p>
+  </div>
+
+  <div class="footer">
+    <span><strong><span style="color:var(--green)">Flood</span>Lens</strong> · AI flood area detection from Sentinel-2</span>
+    <span>
+      <a href="https://github.com/arpan-s-dev/floodlens">GitHub</a> ·
+      <a href="https://github.com/cloudtostreet/Sen1Floods11">Sen1Floods11 dataset</a> ·
+      Built by <a href="https://github.com/arpan-s-dev">Arpanjeet Singh</a>
+    </span>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: "neutral",
+    securityLevel: "loose",
+    flowchart: {
+      htmlLabels: true,
+      curve: "basis",
+      padding: 18,
+      nodeSpacing: 36,
+      rankSpacing: 48,
+      wrappingWidth: 180,
+      useMaxWidth: true,
+    },
+    sequence: {
+      useMaxWidth: true,
+      mirrorActors: false,
+      messageFontSize: 13,
+      actorFontSize: 13,
+      noteFontSize: 12,
+      width: 160,
+      height: 52,
+    },
+    themeVariables: {
+      fontFamily: "Space Grotesk, sans-serif",
+      fontSize: "14px",
+      primaryColor: "#f0fdf4", primaryBorderColor: "#15803d", primaryTextColor: "#111827",
+      lineColor: "#15803d", secondaryColor: "#ffffff", tertiaryColor: "#f9fafb",
+      noteBkgColor: "#f0fdf4", noteBorderColor: "#15803d",
+      actorBorder: "#15803d", actorBkg: "#ffffff",
+      signalColor: "#374151", signalTextColor: "#374151"
+    }
+  });
+  let seq = 0;
+  for (const node of document.querySelectorAll("pre.mermaid")) {
+    try {
+      const { svg } = await mermaid.render("flmmd" + (seq++), node.textContent.trim());
+      node.innerHTML = svg;
+      // After render, lift foreignObject clip so multi-line labels are fully visible
+      node.querySelectorAll("foreignObject").forEach((fo) => {
+        fo.style.overflow = "visible";
+        const div = fo.querySelector("div");
+        if (div) {
+          div.style.lineHeight = "1.35";
+          div.style.overflow = "visible";
+        }
+      });
+    } catch (e) { console.error("mermaid:", e); }
+  }
+</script>
+<script src="app.js"></script>
+</body>
+</html>
